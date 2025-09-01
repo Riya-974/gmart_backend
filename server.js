@@ -11,14 +11,29 @@ const app=express()
 
 //middlewears
 
-app.use(cors())
+
 app.use(express.json())
+
+
+app.use(cors({
+  origin: [
+    "http://localhost:5173", 
+    "https://gmart-frontend-roan.vercel.app"
+  ],
+  credentials: true
+}));
 
 
 app.get("/",(req,res)=>{
     return res.json({message:"connexted"})
 })
 
+app.get("/api/v1/ping", (req, res) => {
+  res.json({
+    success: true,
+    message: "Frontend connected with backend ✅"
+  });
+});
 
 //routes
 app.use("/api/v1/category",categoryRoutes)
