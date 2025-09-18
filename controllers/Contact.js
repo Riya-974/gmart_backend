@@ -1,54 +1,47 @@
-import nodemailer from "nodemailer";
+// controllers/contact.js
+import { Resend } from "resend";
+import { Contacts } from "../models/contact.js";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const contact = async (req, res) => {
   try {
-    const { name, email, category, message } = req.body;
+    const { name, email, phone, message, category } = req.body;
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      requireTLS: true,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD },
-      logger: true,
-      debug: true,
-      connectionTimeout: 20000,
-      socketTimeout: 20000,
+    if (!name || !email || !message || !category) {
+      return res.status(400).json({
+        success: false,
+        message: "name, email, message, category is required",
+      });
+    }
+
+    // DB save
+    const doc = await Contacts.create({ name, email, phone, message, category });
+
+    // Email send
+    await resend.emails.send({
+      from: "onboarding@resend.dev", // default sender (free plan)
+      to: process.env.RECIVER_EMAIL, // tumhari receiving email
+      subject: `New Contact from ${name} (${category})`,
+      text: `
+        Name: ${name}
+        Email: ${email}
+        Phone: ${phone || "-"}
+        Category: ${category}
+        Message: ${message}
+      `,
     });
 
-    const mailOptions = {
-      from: `"G-Mart Contact" <${process.env.EMAIL_USER}>`,
-      to: process.env.RECIVER_EMAIL, // env key spelling yahi hai na? (RECIVER_EMAIL)
-      replyTo: email,
-      subject: `New Contact from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\nCategory: ${category}\nMessage: ${message}`,
-    };
-
-    // ✅ DEBUG: promise style so we can print exact reason
-    transporter
-      .sendMail(mailOptions)
-      .then((info) => {
-        console.log("✅ SMTP OK:", {
-          response: info.response,
-          messageId: info.messageId,
-          envelope: info.envelope,
-        });
-        return res.json({ success: true, message: "Email sent successfully 🚀" });
-      })
-      .catch((err) => {
-        console.error("❌ SMTP ERR:", {
-          message: err.message,
-          code: err.code,
-          command: err.command,
-          response: err.response,
-        });
-        // TEMP: user ko exact reason dikhado (debug ke liye)
-        return res
-          .status(500)
-          .json({ success: false, message: `Email not sent: ${err.message}` });
-      });
-  } catch (error) {
-    console.error("❌ Controller error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(201).json({
+      success: true,
+      message: "Contact submitted & email sent ✅",
+      contact: doc,
+    });
+  } catch (err) {
+    console.error("💥 Contact error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Email sending failed ❌",
+    });
   }
 };
