@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-export const contactController = async (req, res) => {
+export const contact = async (req, res) => {
   try {
     const { name, email, category, message } = req.body;
 
