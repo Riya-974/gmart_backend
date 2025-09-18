@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { Contacts } from "../models/contact.js";
+import { contact} from "../models/contact.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
