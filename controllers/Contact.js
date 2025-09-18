@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { Contact } from "../models/contact.js";
+import { Contacts } from "../models/contact.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -12,7 +12,7 @@ export const contact = async (req, res) => {
       return res.status(400).json({ success:false, message:"name, email, message, category is required" });
     }
 
-    const doc = await Contact.create({ name, email, phone, message, category });
+    const doc = await Contacts.create({ name, email, phone, message, category });
     res.status(201).json({ success:true, message:"Contact submitted ✅", id: doc._id });
     console.log("📤 response sent → queuing email…");
 
