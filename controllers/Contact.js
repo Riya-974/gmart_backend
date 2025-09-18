@@ -1,27 +1,10 @@
 import nodemailer from "nodemailer";
-import { Contacts } from "../models/contact.js";
 
-export const contact = async (req, res) => {
+export const contactController = async (req, res) => {
   try {
-    const { name, email, phone, message, category } = req.body;
+    const { name, email, category, message } = req.body;
 
-    if (!name || !email || !message || !category) {
-      return res.status(400).json({
-        success: false,
-        message: "name, email, message, category is required",
-      });
-    }
-
-    // 1. Save in DB
-    await Contacts.create({ name, email, phone, message, category });
-
-    // 2. Fast response
-    res.status(201).json({
-      success: true,
-      message: "Contact submitted successfully",
-    });
-
-    // 3. Email (verbose for debugging)
+    // Transporter
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
@@ -29,39 +12,42 @@ export const contact = async (req, res) => {
       requireTLS: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+        pass: process.env.EMAIL_PASSWORD, // Gmail App Password
       },
-      logger: true,
-      debug: true,
-      connectionTimeout: 20000,
-      socketTimeout: 20000,
     });
 
+    // Mail options
     const mailOptions = {
-      from: `"G-Mart Contact" <${process.env.EMAIL_USER}>`,
+      from: `"Gmart Contact" <${process.env.EMAIL_USER}>`,
       to: process.env.RECIVER_EMAIL,
-      replyTo: email,
       subject: `New Contact from ${name}`,
-      text: `Name: ${name}
-Email: ${email}
-Phone: ${phone || "-"}
-Category: ${category}
-Message: ${message}`,
+      text: `
+        Name: ${name}
+        Email: ${email}
+        Category: ${category}
+        Message: ${message}
+      `,
     };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error("❌ Email error:", err.message);
-      } else {
-        console.log("✅ Email accepted by SMTP:", info.response);
+    // Send mail with debug
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Email send error:", error); // Logs full error
+        return res.status(500).json({
+          success: false,
+          message: "Email not sent",
+          error: error.message,
+        });
       }
+      console.log("Email sent successfully:", info.response); // Logs success
+      return res.status(200).json({
+        success: true,
+        message: "Contact submitted and email sent successfully",
+      });
     });
 
-  } catch (err) {
-    console.error("💥 Contact error:", err.message);
-    return res.status(500).json({
-      success: false,
-      message: err.message || "Server error",
-    });
+  } catch (error) {
+    console.error("Controller error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
